@@ -34,4 +34,4 @@ This software is released under the [BSD-Clause 2 license](http://opensource.org
 
 ## Author
 
-Alexandre Mutel aka [xoofx](http://xoofx.com).
+Alexandre Mutel aka [xoofx](https://xoofx.github.io).

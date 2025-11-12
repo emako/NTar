@@ -1,3 +1,5 @@
+[![GitHub license](https://img.shields.io/github/license/emako/NTar)](https://github.com/emako/NTar/blob/master/LICENSE.txt) [![NuGet](https://img.shields.io/nuget/v/NTar.svg)](https://nuget.org/packages/NTar) [![Actions](https://github.com/emako/NTar/actions/workflows/library.nuget.yml/badge.svg)](https://github.com/emako/NTar/actions/workflows/library.nuget.yml)
+
 # NTar
 
 This small library provides minimal TAR archive reading and writing helpers.

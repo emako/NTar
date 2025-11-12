@@ -14,7 +14,7 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <Version>1.0.0</Version>
     <Authors>xoofx, ema</Authors>
-    <PackageLicenseUrl>https://github.com/emako/NTar/blob/master/LICENSE.txt</PackageLicenseUrl>
+    <PackageLicenseExpression>https://github.com/emako/NTar/blob/master/LICENSE.txt</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/emako/NTar</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <Description>A library for serializing/deserializing a tar file in .NET</Description>

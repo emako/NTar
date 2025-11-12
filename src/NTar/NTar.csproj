@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>NTar</AssemblyName>
+    <RootNamespace>NTar</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>Alexandre Mutel</Authors>
+    <Company>Alexandre Mutel</Company>
+    <PackageLicenseUrl>https://github.com/xoofx/NTar/blob/master/license.txt</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/xoofx/NTar</PackageProjectUrl>
+    <Description>A single file for deserializing a tar file in .NET</Description>
+    <Copyright>Alexandre Mutel</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
+
+    <!-- 双目标项目 -->
+    <TargetFrameworks>net45;net8.0</TargetFrameworks>
+
+    <!-- 输出路径与中间路径（保持原始布局） -->
+    <BaseIntermediateOutputPath>..\..\artifacts\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <OutputPath>..\..\artifacts\bin\$(MSBuildProjectName)\</OutputPath>
+
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <!-- 调试与发布宏定义 -->
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <DefineConstants>DEBUG;TRACE;NTAR_PUBLIC</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DefineConstants>RELEASE;TRACE;NTAR_PUBLIC</DefineConstants>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <!-- 针对 .NET 8 兼容早期 CORE 定义 -->
+  <PropertyGroup Condition="'$(TargetFramework)'=='net8.0'">
+    <DefineConstants>$(DefineConstants);CORE</DefineConstants>
+  </PropertyGroup>
+
+  <!-- 旧 .NET Framework 4.5 的引用 -->
+  <ItemGroup Condition="'$(TargetFramework)'=='net45'">
+    <Reference Include="mscorlib" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+
+  <!-- .NET 8 下使用标准库依赖 -->
+  <ItemGroup Condition="'$(TargetFramework)'=='net8.0'">
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="System.Collections" Version="4.3.0" />
+    <PackageReference Include="System.Linq" Version="4.3.0" />
+    <PackageReference Include="System.Reflection" Version="4.3.0" />
+    <PackageReference Include="System.Runtime" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
+    <PackageReference Include="System.Threading" Version="4.3.0" />
+  </ItemGroup>
+
+</Project>

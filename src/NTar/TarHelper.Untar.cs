@@ -6,9 +6,9 @@ using System.Text;
 namespace NTar;
 
 /// <summary>
-/// A tar reader to untar a stream.
+/// An helper class to untar a stream.
 /// </summary>
-public static class TarReader
+public static partial class TarHelper
 {
     internal static readonly DateTime Epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

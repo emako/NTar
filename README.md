@@ -1,61 +1,80 @@
-[![GitHub license](https://img.shields.io/github/license/emako/NTar)](https://github.com/emako/NTar/blob/master/LICENSE.txt) [![NuGet](https://img.shields.io/nuget/v/NTar.svg)](https://nuget.org/packages/NTar) [![Actions](https://github.com/emako/NTar/actions/workflows/library.nuget.yml/badge.svg)](https://github.com/emako/NTar/actions/workflows/library.nuget.yml)
+[![GitHub license](https://img.shields.io/github/license/emako/NTar)](https://github.com/emako/NTar/blob/master/LICENSE.txt) [![NuGet](https://img.shields.io/nuget/v/NTar.svg)](https://www.nuget.org/packages/NTar) [![Actions](https://github.com/emako/NTar/actions/workflows/library.nuget.yml/badge.svg)](https://github.com/emako/NTar/actions/workflows/library.nuget.yml)
 
 # NTar
 
-This small library provides minimal TAR archive reading and writing helpers.
+NTar is a small .NET library for serializing/deserializing a tar file.
 
-This is a fork of [xoofx/NTar](https://github.com/xoofx/NTar).
+It exposes simple APIs to create TAR archives from directories or programmatic entries and to read/extract TAR archives from streams.
 
-APIs added
-- `TarHelper.Untar.cs` — already present: extension methods to untar a `Stream` and to extract to disk: `Stream.Untar()` and `Stream.UntarTo(string outputDirectory)`.
-- `TarHelper.Tar.cs` — new: create tar archives:
-  - `public static void TarTo(this string inputDirectory)` — create a `.tar` file next to the specified input directory. Example: `"C:\my\folder".TarTo()` creates `C:\my\folder.tar`.
-  - `public static Stream Tar(this IEnumerable<TarEntryStream> entries)` — build a tar archive in-memory from a sequence of `TarEntryStream` instances and return it as a seekable `Stream`.
+Key highlights
+
+- Small, focused: reading and writing TAR without heavyweight dependencies.
+- Supports a wide range of .NET targets (see Supported targets).
+- Simple streaming APIs for programmatic creation and extraction.
+
+Supported targets
+
+The library provides builds and packages for multiple targets including (but not limited to):
+
+- .NET Framework 4.5 and later
+- .NET 5.0 and later
+- .NET Standard 2.0 and later
+
+## Installation
+
+Install the package from NuGet:
+
+```powershell
+dotnet add package NTar
+```
 
 ## Usage examples
 
-Create a tar file from a directory:
+Create a .tar file from a directory:
 
 ```csharp
-// Creates "test.tar"
+// Creates "test.tar" (next to the input directory)
 "C:\path\to\folder".TarTo("test.tar");
 ```
 
-Create a tar stream from programmatic entries:
+Create a tar stream from programmatic entries and write to disk:
 
 ```csharp
 var entries = new List<TarEntryStream>();
-// create TarEntryStream objects (MemoryStream wrappers) and set FileName, LastModifiedTime, IsDirectory, etc.
-Stream tar = entries.Tar();
-// write tar to disk
-using (var fs = File.Create("out.tar")) tar.CopyTo(fs);
+// populate TarEntryStream objects (MemoryStream wrappers) and set FileName, LastModifiedTime, IsDirectory, etc.
+using Stream tarStream = entries.Tar();
+using var outFile = File.Create("out.tar");
+tarStream.CopyTo(outFile);
 ```
 
-Gets all files entries from a tar stream:
+Enumerate entries from a tar stream:
 
-```C#
-foreach (var entryStream in stream.Untar())
+```csharp
+foreach (var entry in myTarStream.Untar())
 {
-    // stream.FileName, stream.LastModifiedTime, stream.Length
+    Console.WriteLine(entry.FileName);
+    // entry is a TarEntryStream-like object exposing FileName, LastModifiedTime, Length, and a Stream
 }
 ```
 
-Untar the stream to a specified output directory:
+Extract a tar stream to a directory:
 
-```C#
-stream.UntarTo(".");
+```csharp
+myTarStream.UntarTo("./output");
 ```
 
-## Alternative
+API notes
 
-[mfow/tar-cs](https://github.com/mfow/tar-cs)
+- Tar creation helpers are available in `TarHelper.Tar.cs` (e.g. `string.TarTo(string outputFile)` and `IEnumerable<TarEntryStream>.Tar()` returning a seekable `Stream`).
+- Untar / extraction helpers are provided in `TarHelper.Untar.cs` as stream extension methods: `Stream.Untar()` and `Stream.UntarTo(string outputDirectory)`.
 
 ## License
 
-This software is released under the [BSD-Clause 2 license](http://opensource.org/licenses/BSD-2-Clause).
+This project is licensed under the [BSD-Clause 2 license](http://opensource.org/licenses/BSD-2-Clause).
 
-## Authors
+## Acknowledgements
 
-Alexandre Mutel aka [xoofx](https://xoofx.github.io).
+This project builds on work by Alexandre Mutel (aka xoofx).
 
-And modify it to support the `tar` method used by ema.
+If you need a different TAR implementation with more features, consider alternatives such as [mfow/tar-cs](https://github.com/mfow/tar-cs).
+

@@ -148,7 +148,7 @@ public static partial class TarHelper
             Array.Copy(version, 0, header, 263, version.Length);
 
             // uname/gname - use entry values when present, fall back to environment/user or empty
-            byte[] uname = Encoding.ASCII.GetBytes((entry.UserName ?? Environment.UserName ?? string.Empty));
+            byte[] uname = Encoding.ASCII.GetBytes(entry.UserName ?? string.Empty);
             Array.Copy(uname, 0, header, 265, Math.Min(uname.Length, 32));
             byte[] gname = Encoding.ASCII.GetBytes(entry.GroupName ?? string.Empty);
             Array.Copy(gname, 0, header, 297, Math.Min(gname.Length, 32));

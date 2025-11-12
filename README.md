@@ -1,10 +1,33 @@
 # NTar
 
-A single file C# file to untar file entries from a `tar` stream.
+This small library provides minimal TAR archive reading and writing helpers.
 
 This is a fork of [xoofx/NTar](https://github.com/xoofx/NTar).
 
-## Usage
+APIs added
+- `TarHelper.Untar.cs` — already present: extension methods to untar a `Stream` and to extract to disk: `Stream.Untar()` and `Stream.UntarTo(string outputDirectory)`.
+- `TarHelper.Tar.cs` — new: create tar archives:
+  - `public static void TarTo(this string inputDirectory)` — create a `.tar` file next to the specified input directory. Example: `"C:\my\folder".TarTo()` creates `C:\my\folder.tar`.
+  - `public static Stream Tar(this IEnumerable<TarEntryStream> entries)` — build a tar archive in-memory from a sequence of `TarEntryStream` instances and return it as a seekable `Stream`.
+
+Usage examples
+
+Create a tar file from a directory:
+
+```csharp
+// Creates "test.tar"
+"C:\path\to\folder".TarTo("test.tar");
+```
+
+Create a tar stream from programmatic entries:
+
+```csharp
+var entries = new List<TarEntryStream>();
+// create TarEntryStream objects (MemoryStream wrappers) and set FileName, LastModifiedTime, IsDirectory, etc.
+Stream tar = entries.Tar();
+// write tar to disk
+using (var fs = File.Create("out.tar")) tar.CopyTo(fs);
+```
 
 Gets all files entries from a tar stream:
 
@@ -20,16 +43,6 @@ Untar the stream to a specified output directory:
 ```C#
 stream.UntarTo(".");
 ```
-
-## Usage
-
-Copy the [`TarHelper.cs`](http://github.com/xoofx/NTar/tree/master/src/NTar/TarHelper.cs) file directly into your project 
-
-The code is compatible with `.NET 4.x+` and `.NETCore`
-
-## Limitations
-
-NTar does not provide currently creation of a tar archive.
 
 ## License
 This software is released under the [BSD-Clause 2 license](http://opensource.org/licenses/BSD-2-Clause). 

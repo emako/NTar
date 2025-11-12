@@ -71,6 +71,53 @@ public class TestTar
     }
 
     [Test]
+    public void TestCreateTarAndUntar()
+    {
+        var testDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+
+        var tempDir = Path.Combine(testDirectory, "tmp_for_tar_test");
+        if (Directory.Exists(tempDir))
+        {
+            Directory.Delete(tempDir, true);
+        }
+        Directory.CreateDirectory(tempDir);
+
+        File.WriteAllText(Path.Combine(tempDir, "a.txt"), "0123456789");
+        Directory.CreateDirectory(Path.Combine(tempDir, "b"));
+        File.WriteAllText(Path.Combine(tempDir, "b", "b.txt"), string.Empty);
+
+        var outputTar = Path.Combine(testDirectory, "created_test.tar");
+        if (File.Exists(outputTar)) File.Delete(outputTar);
+
+        // Create tar
+        tempDir.TarTo(outputTar);
+
+        // Read back and verify
+        using (var stream = File.OpenRead(outputTar))
+        {
+            var files = new Dictionary<string, string>();
+
+            foreach (var entryStream in stream.Untar())
+            {
+                if (entryStream.IsDirectory) continue;
+
+                var reader = new StreamReader(entryStream);
+                files[entryStream.FileName] = reader.ReadToEnd();
+            }
+
+            Assert.That(2, Is.EqualTo(files.Count));
+            Assert.That(files.ContainsKey("./a.txt"), Is.True);
+            Assert.That(files.ContainsKey("./b/b.txt"), Is.True);
+            Assert.That("0123456789", Is.EqualTo(files["./a.txt"]));
+            Assert.That(string.Empty, Is.EqualTo(files["./b/b.txt"]));
+        }
+
+        // cleanup
+        if (File.Exists(outputTar)) File.Delete(outputTar);
+        if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+    }
+
+    [Test]
     public void TestToDirectory()
     {
         var testDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location);

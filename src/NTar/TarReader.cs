@@ -19,14 +19,14 @@ public static class TarReader
     /// <param name="outputDirectory">The output directory.</param>
     /// <exception cref="System.ArgumentNullException"></exception>
     /// <exception cref="InvalidDataException">If an invalid entry was found</exception>
-    public static void UntarTo(this Stream stream, string outputDirectory)
+    public static void Extract(this Stream stream, string outputDirectory)
     {
         if (outputDirectory == null) throw new ArgumentNullException(nameof(outputDirectory));
 
         outputDirectory = Path.GetFullPath(outputDirectory);
 
         // Untar the stream
-        foreach (var entryStream in stream.Untar())
+        foreach (var entryStream in stream.Read())
         {
             if (entryStream.IsDirectory)
             {
@@ -64,7 +64,7 @@ public static class TarReader
     /// <param name="inputStream">The input stream.</param>
     /// <returns>An enumeration of file entries. The inputstream can be read on each entry with a length of <see cref="TarEntryStream.Length"/></returns>
     /// <exception cref="InvalidDataException">If an invalid entry was found</exception>
-    public static IEnumerable<TarEntryStream> Untar(this Stream inputStream)
+    public static IEnumerable<TarEntryStream> Read(this Stream inputStream)
     {
         var header = new byte[512];
 

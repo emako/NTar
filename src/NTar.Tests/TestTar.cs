@@ -45,7 +45,7 @@ public class TestTar
             var files = new Dictionary<string, string>();
 
             // Untar the stream
-            foreach (var entryStream in stream.Read())
+            foreach (var entryStream in stream.Untar())
             {
                 if (entryStream.IsDirectory) continue;
 
@@ -64,7 +64,7 @@ public class TestTar
             if (stream.CanSeek)
             {
                 stream.Position = 0;
-                stream.Extract(testDirectory);
+                stream.UntarTo(testDirectory);
                 Assert.That("0123456789", Is.EqualTo(File.ReadAllText(Path.Combine(testDirectory, "./a.txt"))));
             }
         }
@@ -82,7 +82,7 @@ public class TestTar
 
         using (var stream = File.OpenRead(Path.Combine(testDirectory, "test.tar")))
         {
-            stream.Extract(outputDirectory);
+            stream.UntarTo(outputDirectory);
 
             var fileA = Path.Combine(outputDirectory, "./a.txt");
             var fileB = Path.Combine(outputDirectory, "./b/b.txt");

@@ -1,28 +1,4 @@
-﻿// Copyright(c) 2016, Alexandre Mutel
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without modification
-// , are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED.IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -30,11 +6,11 @@ using System.Text;
 namespace NTar;
 
 /// <summary>
-/// An helper class to untar a stream.
+/// A tar reader to untar a stream.
 /// </summary>
-public static class TarHelper
+public static class TarReader
 {
-    internal static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    internal static readonly DateTime Epoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
     /// Untars a stream to a specified output directory.
@@ -264,78 +240,5 @@ public static class TarHelper
             value = (value << 3) + (c - '0');
         }
         return value;
-    }
-
-    /// <summary>
-    /// An Tar entry stream for a file entry from a tar stream.
-    /// </summary>
-    /// <seealso cref="System.IO.Stream" />
-    /// <remarks>
-    /// Initializes a new instance of the <see cref="TarEntryStream"/> class.
-    /// </remarks>
-    /// <param name="stream">The stream.</param>
-    /// <param name="start">The start.</param>
-    /// <param name="length">The length.</param>
-    /// <exception cref="System.ArgumentNullException"></exception>
-    public class TarEntryStream(Stream stream, long start, long length) : Stream
-    {
-        private readonly Stream stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        private readonly long start = start;
-        private long position = start;
-
-        /// <summary>
-        /// Gets the name of the file entry.
-        /// </summary>
-        public string FileName { get; internal set; }
-
-        /// <summary>
-        /// Gets the timestamp of the file entry.
-        /// </summary>
-        public DateTime LastModifiedTime { get; internal set; }
-
-        public override void Flush()
-        {
-            throw new NotSupportedException();
-        }
-
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override void SetLength(long value)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
-            if (offset < 0 || offset >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(offset));
-            if (count == 0) return 0;
-
-            var maxCount = (int)Math.Min(count, start + Length - position);
-            var readCount = stream.Read(buffer, offset, maxCount);
-            position += readCount;
-            return readCount;
-        }
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-
-        public override long Length { get; } = length;
-
-        public override long Position
-        {
-            get => position - start;
-            set => throw new NotSupportedException();
-        }
     }
 }

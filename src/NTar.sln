@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NTar.Tests", "NTar.Tests\NT
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{061866E2-005C-4D13-A338-EA464BBEC60F}"
 	ProjectSection(SolutionItems) = preProject
-		..\license.txt = ..\license.txt
+		..\LICENSE.txt = ..\LICENSE.txt
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NTar", "NTar\NTar.csproj", "{34F81AA5-B69A-1563-F24B-1C7275A7E55C}"

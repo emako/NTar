@@ -70,7 +70,8 @@ public static class TarReader
 
         long position = 0;
 
-        inputStream.Position = 0;
+        if (inputStream.CanSeek)
+            inputStream.Position = 0;
 
         while (true)
         {

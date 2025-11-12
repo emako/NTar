@@ -47,23 +47,25 @@ public class TestTar
             // Untar the stream
             foreach (var entryStream in stream.Read())
             {
+                if (entryStream.IsDirectory) continue;
+
                 var reader = new StreamReader(entryStream);
                 files[entryStream.FileName] = reader.ReadToEnd();
             }
 
-            Assert.AreEqual(2, files.Count);
+            Assert.That(2, Is.EqualTo(files.Count));
 
-            Assert.True(files.ContainsKey("./a.txt"));
-            Assert.True(files.ContainsKey("./b/b.txt"));
+            Assert.That(files.ContainsKey("./a.txt"), Is.True);
+            Assert.That(files.ContainsKey("./b/b.txt"), Is.True);
 
-            Assert.AreEqual("0123456789", files["./a.txt"]);
-            Assert.AreEqual(string.Empty, files["./b/b.txt"]);
+            Assert.That("0123456789", Is.EqualTo(files["./a.txt"]));
+            Assert.That(string.Empty, Is.EqualTo(files["./b/b.txt"]));
 
             if (stream.CanSeek)
             {
                 stream.Position = 0;
                 stream.Extract(testDirectory);
-                Assert.AreEqual("0123456789", File.ReadAllText(Path.Combine(testDirectory, "./a.txt")));
+                Assert.That("0123456789", Is.EqualTo(File.ReadAllText(Path.Combine(testDirectory, "./a.txt"))));
             }
         }
     }
@@ -85,11 +87,11 @@ public class TestTar
             var fileA = Path.Combine(outputDirectory, "./a.txt");
             var fileB = Path.Combine(outputDirectory, "./b/b.txt");
 
-            Assert.True(File.Exists(fileA));
-            Assert.True(File.Exists(fileB));
+            Assert.That(File.Exists(fileA), Is.True);
+            Assert.That(File.Exists(fileB), Is.True);
 
-            Assert.AreEqual("0123456789", File.ReadAllText(fileA));
-            Assert.AreEqual(string.Empty, File.ReadAllText(fileB));
+            Assert.That("0123456789", Is.EqualTo(File.ReadAllText(fileA)));
+            Assert.That(string.Empty, Is.EqualTo(File.ReadAllText(fileB)));
         }
     }
 }

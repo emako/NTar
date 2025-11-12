@@ -1,9 +1,8 @@
-﻿namespace NTar.Tests
+﻿namespace NTar.Tests;
+
+public class Program
 {
-    public class Program
+    public static void Main()
     {
-        public static void Main()
-        {
-        }
     }
 }

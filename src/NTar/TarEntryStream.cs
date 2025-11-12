@@ -1,19 +1,27 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace NTar;
 
 /// <summary>
-/// An Tar entry stream for a file entry from a tar stream.
+/// Represents a view (slice) of an underlying stream that corresponds to a single
+/// TAR entry's data region. This class wraps the original input stream and
+/// exposes only the bytes belonging to the entry (from <c>start</c> for
+/// <c>length</c> bytes). Consumers can read from this stream to obtain the
+/// entry payload without affecting other entries.
 /// </summary>
-/// <seealso cref="Stream" />
 /// <remarks>
-/// Initializes a new instance of the <see cref="TarEntryStream"/> class.
+/// The instance does not copy the underlying data; it reads directly from the
+/// provided <paramref name="stream"/>. When the underlying stream supports
+/// seeking, this wrapper will also support seeking and will position the
+/// underlying stream as needed. Writing and resizing are not supported.
 /// </remarks>
-/// <param name="stream">The stream.</param>
-/// <param name="start">The start.</param>
-/// <param name="length">The length.</param>
-/// <exception cref="ArgumentNullException"></exception>
+/// <param name="stream">The underlying stream containing the tar archive.</param>
+/// <param name="start">Absolute start position (within <paramref name="stream"/>) of the entry data.</param>
+/// <param name="length">Number of bytes for this entry's data payload.</param>
+/// <exception cref="ArgumentNullException">If <paramref name="stream"/> is null.</exception>
+[DebuggerDisplay("{ToString()}")]
 public class TarEntryStream(Stream stream, long start, long length) : Stream
 {
     private readonly Stream stream = stream ?? throw new ArgumentNullException(nameof(stream));
@@ -131,12 +139,15 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
             case SeekOrigin.Begin:
                 target = start + offset;
                 break;
+
             case SeekOrigin.Current:
                 target = position + offset;
                 break;
+
             case SeekOrigin.End:
                 target = start + Length + offset;
                 break;
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(origin));
         }
@@ -181,7 +192,11 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
 
     public override bool CanRead => true;
 
-    public override bool CanSeek => false;
+    /// <summary>
+    /// Returns true if the underlying stream supports seeking. Seeking is only
+    /// possible when the wrapped stream is seekable.
+    /// </summary>
+    public override bool CanSeek => stream.CanSeek;
 
     public override bool CanWrite => false;
 
@@ -198,4 +213,10 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
             Seek(value, SeekOrigin.Begin);
         }
     }
+
+    /// <summary>
+    /// Helper string shown by the debugger (includes name, type, length and position).
+    /// </summary>
+    public override string ToString()
+        => $"{(string.IsNullOrEmpty(FileName) ? "(no name)" : FileName)} {(IsDirectory ? "[dir]" : "[file]")} len={Length} pos={Position}";
 }

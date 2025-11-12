@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 namespace NTar;
@@ -22,16 +21,16 @@ public static partial class TarHelper
     {
         if (inputDirectory == null) throw new ArgumentNullException(nameof(inputDirectory));
         if (outputFileName == null) throw new ArgumentNullException(nameof(outputFileName));
-        string dir = Path.GetFullPath(inputDirectory);
-        if (!Directory.Exists(dir)) throw new DirectoryNotFoundException(dir);
+        inputDirectory = Path.GetFullPath(inputDirectory);
+        if (!Directory.Exists(inputDirectory)) throw new DirectoryNotFoundException(inputDirectory);
 
         // collect entries (directories first so that consumers can create directories before files)
         List<TarEntryStream> entries = [];
 
         // Add directory entries
-        foreach (var d in Directory.EnumerateDirectories(dir, "*", SearchOption.AllDirectories))
+        foreach (var d in Directory.EnumerateDirectories(inputDirectory, "*", SearchOption.AllDirectories))
         {
-            string rel = GetRelativePath(dir, d);
+            string rel = GetRelativePath(inputDirectory, d);
             MemoryStream ms = new();
             TarEntryStream tes = new(ms, 0, 0)
             {
@@ -45,9 +44,9 @@ public static partial class TarHelper
         }
 
         // Add file entries
-        foreach (string f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+        foreach (string f in Directory.EnumerateFiles(inputDirectory, "*", SearchOption.AllDirectories))
         {
-            string rel = GetRelativePath(dir, f);
+            string rel = GetRelativePath(inputDirectory, f);
             byte[] bytes = File.ReadAllBytes(f);
             MemoryStream ms = new(bytes, writable: false);
             TarEntryStream tes = new(ms, 0, bytes.LongLength)
@@ -231,31 +230,23 @@ public static partial class TarHelper
         buffer[index + count - 1] = 0;
     }
 
-    private static string GetRelativePath(string root, string path)
+    private static string GetRelativePath(string basePath, string targetPath)
     {
-        if (string.IsNullOrEmpty(root)) return string.Empty;
-        string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        string fullPath = Path.GetFullPath(path);
+#if NETCOREAPP2_0_OR_GREATER
+        return Path.GetRelativePath(basePath, targetPath);
+#else
+        Uri baseUri = new(AppendDirectorySeparator(basePath));
+        Uri targetUri = new(targetPath);
+        string relative = Uri.UnescapeDataString(baseUri.MakeRelativeUri(targetUri).ToString());
 
-        // If path starts with root, return the relative portion
-        if (fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            string rel = fullPath.Substring(fullRoot.Length).Replace(Path.DirectorySeparatorChar, '/');
-            if (string.IsNullOrEmpty(rel)) return string.Empty;
-            return rel;
-        }
+        return relative.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        // Fallback: strip the drive/root and return a path relative to the drive root
-        try
+        static string AppendDirectorySeparator(string path)
         {
-            string rootPath = Path.GetPathRoot(fullPath) ?? string.Empty;
-            string rel = fullPath.Substring(rootPath.Length).Replace(Path.DirectorySeparatorChar, '/');
-            if (string.IsNullOrEmpty(rel)) return string.Empty;
-            return rel;
+            if (!path.EndsWith(Path.DirectorySeparatorChar.ToString()))
+                return path + Path.DirectorySeparatorChar;
+            return path;
         }
-        catch
-        {
-            return fullPath.Replace(Path.DirectorySeparatorChar, '/');
-        }
+#endif
     }
 }

@@ -28,14 +28,33 @@ public static class TarReader
         // Untar the stream
         foreach (var entryStream in stream.Untar())
         {
-            var outputFile = Path.Combine(outputDirectory, entryStream.FileName);
-            var outputDir = Path.GetDirectoryName(outputFile);
-            Directory.CreateDirectory(outputDir);
-            using (var outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
+            if (entryStream.IsDirectory)
             {
-                entryStream.CopyTo(outputStream);
+                // Directory entry: create the directory and set its last write time
+                var dirPath = Path.Combine(outputDirectory, entryStream.FileName ?? string.Empty);
+                // Trim any trailing separators that may be present in the tar entry name
+                dirPath = dirPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                Directory.CreateDirectory(dirPath);
+                try
+                {
+                    Directory.SetLastWriteTime(dirPath, entryStream.LastModifiedTime);
+                }
+                catch
+                {
+                    // Ignore failures to set directory timestamp
+                }
             }
-            File.SetLastWriteTime(outputFile, entryStream.LastModifiedTime);
+            else
+            {
+                var outputFile = Path.Combine(outputDirectory, entryStream.FileName);
+                var outputDir = Path.GetDirectoryName(outputFile);
+                Directory.CreateDirectory(outputDir);
+                using (var outputStream = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
+                {
+                    entryStream.CopyTo(outputStream);
+                }
+                File.SetLastWriteTime(outputFile, entryStream.LastModifiedTime);
+            }
         }
     }
 
@@ -50,6 +69,8 @@ public static class TarReader
         var header = new byte[512];
 
         long position = 0;
+
+        inputStream.Position = 0;
 
         while (true)
         {
@@ -93,6 +114,31 @@ public static class TarReader
             // Read file name
             var fileName = GetString(header, 0, 100);
 
+            // Read mode, uid and gid
+            var modeRead = ReadOctal(header, 100, 8);
+            var uidRead = ReadOctal(header, 108, 8);
+            var gidRead = ReadOctal(header, 116, 8);
+
+            // Read linkname
+            var linkName = GetString(header, 157, 100);
+
+            // Read user and group names (ustar fields)
+            var userName = GetString(header, 265, 32);
+            var groupName = GetString(header, 297, 32);
+
+            // Read magic/version and normalize (trim whitespace)
+            var magicRaw = GetString(header, 257, 8);
+            var versionRaw = GetString(header, 263, 2);
+            var magic = string.IsNullOrWhiteSpace(magicRaw) ? null : magicRaw.Trim();
+            var version = string.IsNullOrWhiteSpace(versionRaw) ? null : versionRaw.Trim();
+
+            // Read device major/minor
+            var devMajorRead = ReadOctal(header, 329, 8);
+            var devMinorRead = ReadOctal(header, 337, 8);
+
+            // Read prefix (for long file names)
+            var prefix = GetString(header, 345, 155);
+
             // read checksum
             var checksum = ReadOctal(header, 148, 8);
             if (!checksum.HasValue)
@@ -129,9 +175,9 @@ public static class TarReader
 
             // Read the type of the file entry
             var type = header[156];
-            // We support only the File type
+            // We support file and directory types
             TarEntryStream tarEntryStream = null;
-            if (type == '0')
+            if (type == '0' || type == 0)
             {
                 // Read timestamp
                 var unixTimeStamp = ReadOctal(header, 136, 12);
@@ -141,22 +187,100 @@ public static class TarReader
                 }
                 var lastModifiedTime = Epoch.AddSeconds(unixTimeStamp.Value).ToLocalTime();
 
-                // Double check magic ustar to load prefix filename
-                var ustar = GetString(header, 257, 8);
-                // Check for ustar only
-                if (ustar != null && ustar.Trim() == "ustar")
+                // If ustar, load prefix filename
+                if (magic == "ustar")
                 {
-                    var prefixFileName = GetString(header, 345, 155);
-                    fileName = prefixFileName + fileName;
+                    fileName = prefix + fileName;
                 }
 
                 tarEntryStream = new TarEntryStream(inputStream, position, fileLength)
                 {
                     FileName = fileName,
-                    LastModifiedTime = lastModifiedTime
+                    LastModifiedTime = lastModifiedTime,
+                    IsDirectory = false,
+                    Mode = modeRead.HasValue ? (int)modeRead.Value : 0,
+                    UserId = uidRead.HasValue ? (int)uidRead.Value : 0,
+                    GroupId = gidRead.HasValue ? (int)gidRead.Value : 0,
+                    UserName = string.IsNullOrEmpty(userName) ? null : userName,
+                    GroupName = string.IsNullOrEmpty(groupName) ? null : groupName,
+                    LinkName = string.IsNullOrEmpty(linkName) ? null : linkName,
+                    Magic = string.IsNullOrEmpty(magic) ? null : magic,
+                    Version = string.IsNullOrEmpty(version) ? null : version,
+                    DevMajor = devMajorRead.HasValue ? (int)devMajorRead.Value : 0,
+                    DevMinor = devMinorRead.HasValue ? (int)devMinorRead.Value : 0,
+                    Prefix = string.IsNullOrEmpty(prefix) ? null : prefix,
+                    TypeFlag = (char)type
                 };
 
                 // Wrap the region into a slice of the original stream
+                yield return tarEntryStream;
+            }
+            else if (type == '5')
+            {
+                // Directory entry
+                var unixTimeStamp = ReadOctal(header, 136, 12);
+                var lastModifiedTime = unixTimeStamp.HasValue ? Epoch.AddSeconds(unixTimeStamp.Value).ToLocalTime() : DateTime.Now;
+
+                // If ustar, load prefix filename
+                if (magic == "ustar")
+                {
+                    fileName = prefix + fileName;
+                }
+
+                tarEntryStream = new TarEntryStream(inputStream, position, 0)
+                {
+                    FileName = fileName,
+                    LastModifiedTime = lastModifiedTime,
+                    IsDirectory = true,
+                    Mode = modeRead.HasValue ? (int)modeRead.Value : 0,
+                    UserId = uidRead.HasValue ? (int)uidRead.Value : 0,
+                    GroupId = gidRead.HasValue ? (int)gidRead.Value : 0,
+                    UserName = string.IsNullOrEmpty(userName) ? null : userName,
+                    GroupName = string.IsNullOrEmpty(groupName) ? null : groupName,
+                    LinkName = string.IsNullOrEmpty(linkName) ? null : linkName,
+                    Magic = string.IsNullOrEmpty(magic) ? null : magic,
+                    Version = string.IsNullOrEmpty(version) ? null : version,
+                    DevMajor = devMajorRead.HasValue ? (int)devMajorRead.Value : 0,
+                    DevMinor = devMinorRead.HasValue ? (int)devMinorRead.Value : 0,
+                    Prefix = string.IsNullOrEmpty(prefix) ? null : prefix,
+                    TypeFlag = (char)type
+                };
+
+                // For directories there is no data to read, just yield the entry
+                yield return tarEntryStream;
+            }
+            else if (type == '2')
+            {
+                // Symbolic link
+                var unixTimeStamp = ReadOctal(header, 136, 12);
+                var lastModifiedTime = unixTimeStamp.HasValue ? Epoch.AddSeconds(unixTimeStamp.Value).ToLocalTime() : DateTime.Now;
+
+                // If ustar, load prefix filename
+                if (magic == "ustar")
+                {
+                    fileName = prefix + fileName;
+                }
+
+                tarEntryStream = new TarEntryStream(inputStream, position, 0)
+                {
+                    FileName = fileName,
+                    LastModifiedTime = lastModifiedTime,
+                    IsDirectory = false,
+                    Mode = modeRead.HasValue ? (int)modeRead.Value : 0,
+                    UserId = uidRead.HasValue ? (int)uidRead.Value : 0,
+                    GroupId = gidRead.HasValue ? (int)gidRead.Value : 0,
+                    UserName = string.IsNullOrEmpty(userName) ? null : userName,
+                    GroupName = string.IsNullOrEmpty(groupName) ? null : groupName,
+                    LinkName = string.IsNullOrEmpty(linkName) ? null : linkName,
+                    Magic = string.IsNullOrEmpty(magic) ? null : magic,
+                    Version = string.IsNullOrEmpty(version) ? null : version,
+                    DevMajor = devMajorRead.HasValue ? (int)devMajorRead.Value : 0,
+                    DevMinor = devMinorRead.HasValue ? (int)devMinorRead.Value : 0,
+                    Prefix = string.IsNullOrEmpty(prefix) ? null : prefix,
+                    TypeFlag = (char)type
+                };
+
+                // Symlink has no data payload in the header, just yield the entry
                 yield return tarEntryStream;
             }
 

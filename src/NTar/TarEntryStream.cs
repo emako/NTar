@@ -30,6 +30,71 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     /// </summary>
     public DateTime LastModifiedTime { get; internal set; }
 
+    /// <summary>
+    /// True if the entry is a directory.
+    /// </summary>
+    public bool IsDirectory { get; internal set; }
+
+    /// <summary>
+    /// Unix mode/permissions of the entry (as an integer, octal-coded in header).
+    /// </summary>
+    public int Mode { get; internal set; }
+
+    /// <summary>
+    /// User id of the entry owner.
+    /// </summary>
+    public int UserId { get; internal set; }
+
+    /// <summary>
+    /// Group id of the entry owner.
+    /// </summary>
+    public int GroupId { get; internal set; }
+
+    /// <summary>
+    /// User name of the entry owner (ustar uname field).
+    /// </summary>
+    public string UserName { get; internal set; }
+
+    /// <summary>
+    /// Group name of the entry owner (ustar gname field).
+    /// </summary>
+    public string GroupName { get; internal set; }
+
+    /// <summary>
+    /// Link name (for symlinks/hardlinks).
+    /// </summary>
+    public string LinkName { get; internal set; }
+
+    /// <summary>
+    /// Magic field (ustar).
+    /// </summary>
+    public string Magic { get; internal set; }
+
+    /// <summary>
+    /// UStar version field.
+    /// </summary>
+    public string Version { get; internal set; }
+
+    /// <summary>
+    /// Device major number (for character/block devices).
+    /// </summary>
+    public int DevMajor { get; internal set; }
+
+    /// <summary>
+    /// Device minor number (for character/block devices).
+    /// </summary>
+    public int DevMinor { get; internal set; }
+
+    /// <summary>
+    /// Prefix for long file names (ustar prefix field).
+    /// </summary>
+    public string Prefix { get; internal set; }
+
+    /// <summary>
+    /// Raw typeflag from the header as a char.
+    /// </summary>
+    public char TypeFlag { get; internal set; }
+
     public override void Flush()
     {
         throw new NotSupportedException();

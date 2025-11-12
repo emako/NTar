@@ -106,10 +106,10 @@ public class TestTar
             }
 
             Assert.That(2, Is.EqualTo(files.Count));
-            Assert.That(files.ContainsKey("./a.txt"), Is.True);
-            Assert.That(files.ContainsKey("./b/b.txt"), Is.True);
-            Assert.That("0123456789", Is.EqualTo(files["./a.txt"]));
-            Assert.That(string.Empty, Is.EqualTo(files["./b/b.txt"]));
+            Assert.That(files.ContainsKey("a.txt"), Is.True);
+            Assert.That(files.ContainsKey("b/b.txt"), Is.True);
+            Assert.That("0123456789", Is.EqualTo(files["a.txt"]));
+            Assert.That(string.Empty, Is.EqualTo(files["b/b.txt"]));
         }
 
         // cleanup

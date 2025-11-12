@@ -32,7 +32,6 @@ public static partial class TarHelper
         foreach (var d in Directory.EnumerateDirectories(dir, "*", SearchOption.AllDirectories))
         {
             string rel = GetRelativePath(dir, d);
-            if (!rel.StartsWith("./")) rel = "./" + rel;
             MemoryStream ms = new();
             TarEntryStream tes = new(ms, 0, 0)
             {
@@ -49,7 +48,6 @@ public static partial class TarHelper
         foreach (string f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
         {
             string rel = GetRelativePath(dir, f);
-            if (!rel.StartsWith("./")) rel = "./" + rel;
             byte[] bytes = File.ReadAllBytes(f);
             MemoryStream ms = new(bytes, writable: false);
             TarEntryStream tes = new(ms, 0, bytes.LongLength)

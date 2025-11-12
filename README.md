@@ -2,6 +2,8 @@
 
 A single file C# file to untar file entries from a `tar` stream.
 
+This is a fork of [xoofx/NTar](https://github.com/xoofx/NTar).
+
 ## Usage
 
 Gets all files entries from a tar stream:

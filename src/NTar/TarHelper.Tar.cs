@@ -22,16 +22,17 @@ public static partial class TarHelper
     {
         if (inputDirectory == null) throw new ArgumentNullException(nameof(inputDirectory));
         if (outputFileName == null) throw new ArgumentNullException(nameof(outputFileName));
-        var dir = Path.GetFullPath(inputDirectory);
+        string dir = Path.GetFullPath(inputDirectory);
         if (!Directory.Exists(dir)) throw new DirectoryNotFoundException(dir);
 
         // collect entries (directories first so that consumers can create directories before files)
         List<TarEntryStream> entries = [];
 
         // Add directory entries
-        foreach (var d in Directory.EnumerateDirectories(dir, "*", SearchOption.AllDirectories).Concat([dir]))
+        foreach (var d in Directory.EnumerateDirectories(dir, "*", SearchOption.AllDirectories))
         {
             string rel = GetRelativePath(dir, d);
+            if (!rel.StartsWith("./")) rel = "./" + rel;
             MemoryStream ms = new();
             TarEntryStream tes = new(ms, 0, 0)
             {
@@ -48,6 +49,7 @@ public static partial class TarHelper
         foreach (string f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
         {
             string rel = GetRelativePath(dir, f);
+            if (!rel.StartsWith("./")) rel = "./" + rel;
             byte[] bytes = File.ReadAllBytes(f);
             MemoryStream ms = new(bytes, writable: false);
             TarEntryStream tes = new(ms, 0, bytes.LongLength)
@@ -173,6 +175,20 @@ public static partial class TarHelper
             header[154] = 0;
             header[155] = 32;
 
+            // Sanity-check: recompute checksum as Untar does (treat checksum field as spaces)
+            uint verify = 0;
+            for (int i = 0; i < 512; i++)
+            {
+                var c = header[i];
+                if (i >= 148 && i < (148 + 8)) c = 32;
+                verify += c;
+            }
+            // verify should match; if it doesn't, something is wrong with WriteOctal
+            if (verify != chksum)
+            {
+                throw new InvalidDataException($"Checksum computed mismatch when creating header: computed={chksum} verify={verify}");
+            }
+
             // write header
             ms.Write(header, 0, 512);
 
@@ -202,12 +218,17 @@ public static partial class TarHelper
 
     private static void WriteOctal(byte[] buffer, int index, int count, long value)
     {
-        // Write value as octal ASCII, right aligned, with leading zeros/spaces as needed
+        // Write value as octal ASCII, right aligned, with leading spaces as padding and a trailing NUL
         string oct = Convert.ToString(value < 0 ? 0 : value, 8);
         byte[] octBytes = Encoding.ASCII.GetBytes(oct);
         int len = Math.Min(count - 1, octBytes.Length);
+
+        // Fill the field with spaces (ASCII 32) so ReadOctal can skip leading spaces.
+        for (int i = index; i < index + count - 1; i++) buffer[i] = 32;
+
         int start = index + (count - 1 - len);
         Array.Copy(octBytes, octBytes.Length - len, buffer, start, len);
+
         // trailing NUL
         buffer[index + count - 1] = 0;
     }

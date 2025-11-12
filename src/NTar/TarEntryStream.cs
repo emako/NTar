@@ -38,7 +38,7 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     /// <summary>
     /// Unix mode/permissions of the entry (as an integer, octal-coded in header).
     /// </summary>
-    public int Mode { get; internal set; }
+    public int Mode { get; internal set; } = 511; // 0777 dec
 
     /// <summary>
     /// User id of the entry owner.
@@ -117,12 +117,35 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
 
     public override void Flush()
     {
-        throw new NotSupportedException();
+        // Forward to underlying stream when possible
+        if (stream.CanWrite) stream.Flush();
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        throw new NotSupportedException();
+        if (!stream.CanSeek) throw new NotSupportedException();
+
+        long target;
+        switch (origin)
+        {
+            case SeekOrigin.Begin:
+                target = start + offset;
+                break;
+            case SeekOrigin.Current:
+                target = position + offset;
+                break;
+            case SeekOrigin.End:
+                target = start + Length + offset;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(origin));
+        }
+
+        if (target < start || target > start + Length) throw new ArgumentOutOfRangeException(nameof(offset));
+
+        stream.Position = target;
+        position = target;
+        return position - start;
     }
 
     public override void SetLength(long value)
@@ -138,6 +161,14 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
         if (count == 0) return 0;
 
         int maxCount = (int)Math.Min(count, start + Length - position);
+        if (maxCount <= 0) return 0;
+
+        // Ensure underlying stream is positioned at our expected absolute position
+        if (stream.CanSeek && stream.Position != position)
+        {
+            stream.Position = position;
+        }
+
         int readCount = stream.Read(buffer, offset, maxCount);
         position += readCount;
         return readCount;
@@ -159,6 +190,12 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     public override long Position
     {
         get => position - start;
-        set => throw new NotSupportedException();
+        set
+        {
+            // allow repositioning within the entry when underlying stream supports seeking
+            if (!stream.CanSeek) throw new NotSupportedException();
+            if (value < 0 || value > Length) throw new ArgumentOutOfRangeException(nameof(value));
+            Seek(value, SeekOrigin.Begin);
+        }
     }
 }

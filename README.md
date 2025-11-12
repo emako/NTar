@@ -10,7 +10,7 @@ APIs added
   - `public static void TarTo(this string inputDirectory)` — create a `.tar` file next to the specified input directory. Example: `"C:\my\folder".TarTo()` creates `C:\my\folder.tar`.
   - `public static Stream Tar(this IEnumerable<TarEntryStream> entries)` — build a tar archive in-memory from a sequence of `TarEntryStream` instances and return it as a seekable `Stream`.
 
-Usage examples
+## Usage examples
 
 Create a tar file from a directory:
 
@@ -44,9 +44,16 @@ Untar the stream to a specified output directory:
 stream.UntarTo(".");
 ```
 
-## License
-This software is released under the [BSD-Clause 2 license](http://opensource.org/licenses/BSD-2-Clause). 
+## Alternative
 
-## Author
+[mfow/tar-cs](https://github.com/mfow/tar-cs)
+
+## License
+
+This software is released under the [BSD-Clause 2 license](http://opensource.org/licenses/BSD-2-Clause).
+
+## Authors
 
 Alexandre Mutel aka [xoofx](https://xoofx.github.io).
+
+And modify it to support the `tar` method used by ema.

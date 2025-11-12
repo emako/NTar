@@ -3,49 +3,19 @@
   <PropertyGroup>
     <AssemblyName>NTar</AssemblyName>
     <RootNamespace>NTar</RootNamespace>
-    <TargetFrameworks>net45;net6.0</TargetFrameworks>
+    <TargetFrameworks>net45;net462;net47;net471;net472;net48;net481;net6.0;net7.0;net8.0;net9.0;net10.0;</TargetFrameworks>
     <LangVersion>preview</LangVersion>
     <Version>1.0.0</Version>
-    <Authors>Alexandre Mutel</Authors>
-    <Company>Alexandre Mutel</Company>
-    <PackageLicenseUrl>https://github.com/xoofx/NTar/blob/master/license.txt</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/xoofx/NTar</PackageProjectUrl>
-    <Description>A single file for deserializing a tar file in .NET</Description>
-    <Copyright>Alexandre Mutel</Copyright>
+    <Authors>xoofx, ema</Authors>
+    <PackageLicenseUrl>https://github.com/emako/NTar/blob/master/LICENSE.txt</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/emako/NTar</PackageProjectUrl>
+    <Description>A library for serializing/deserializing a tar file in .NET</Description>
+    <Copyright></Copyright>
     <NeutralLanguage>en-US</NeutralLanguage>
     <BaseIntermediateOutputPath>..\..\artifacts\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <OutputPath>..\..\artifacts\bin\$(MSBuildProjectName)\</OutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
-    <DefineConstants>DEBUG;TRACE;NTAR_PUBLIC</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <DefineConstants>RELEASE;TRACE;NTAR_PUBLIC</DefineConstants>
-    <Optimize>true</Optimize>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(TargetFramework)'=='net6.0'">
-    <DefineConstants>$(DefineConstants);CORE</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)'=='net45'">
-    <Reference Include="mscorlib" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)'=='net6.0'">
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="System.Collections" Version="4.3.0" />
-    <PackageReference Include="System.Linq" Version="4.3.0" />
-    <PackageReference Include="System.Reflection" Version="4.3.0" />
-    <PackageReference Include="System.Runtime" Version="4.3.1" />
-    <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
-    <PackageReference Include="System.Threading" Version="4.3.0" />
-  </ItemGroup>
 
 </Project>

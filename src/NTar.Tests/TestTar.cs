@@ -93,15 +93,15 @@ public class TestTar
         tempDir.TarTo(outputTar);
 
         // Read back and verify
-        using (var stream = File.OpenRead(outputTar))
+        using (FileStream stream = File.OpenRead(outputTar))
         {
-            var files = new Dictionary<string, string>();
+            Dictionary<string, string> files = [];
 
             foreach (var entryStream in stream.Untar())
             {
                 if (entryStream.IsDirectory) continue;
 
-                var reader = new StreamReader(entryStream);
+                StreamReader reader = new(entryStream);
                 files[entryStream.FileName] = reader.ReadToEnd();
             }
 

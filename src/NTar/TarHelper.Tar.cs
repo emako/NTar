@@ -26,52 +26,51 @@ public static partial class TarHelper
         if (!Directory.Exists(dir)) throw new DirectoryNotFoundException(dir);
 
         // collect entries (directories first so that consumers can create directories before files)
-        var entries = new List<TarEntryStream>();
+        List<TarEntryStream> entries = [];
 
         // Add directory entries
-        foreach (var d in Directory.EnumerateDirectories(dir, "*", SearchOption.AllDirectories).Concat(new[] { dir }))
+        foreach (var d in Directory.EnumerateDirectories(dir, "*", SearchOption.AllDirectories).Concat([dir]))
         {
-            var rel = GetRelativePath(dir, d);
-            // tar usually uses ./ prefix for relative paths, match Untar tests style
-            if (!rel.StartsWith("./") && !rel.StartsWith("/")) rel = "./" + rel;
-            var ms = new MemoryStream();
-            var tes = new TarEntryStream(ms, 0, 0)
+            string rel = GetRelativePath(dir, d);
+            MemoryStream ms = new();
+            TarEntryStream tes = new(ms, 0, 0)
             {
                 FileName = rel.EndsWith("/") ? rel : rel + "/",
                 LastModifiedTime = Directory.GetLastWriteTime(d),
                 IsDirectory = true,
-                TypeFlag = '5'
+                Type = TarEntryType.Directory,
             };
+
             entries.Add(tes);
         }
 
         // Add file entries
-        foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+        foreach (string f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
         {
-            var rel = GetRelativePath(dir, f);
-            if (!rel.StartsWith("./") && !rel.StartsWith("/")) rel = "./" + rel;
-            var bytes = File.ReadAllBytes(f);
-            var ms = new MemoryStream(bytes, writable: false);
-            var tes = new TarEntryStream(ms, 0, bytes.LongLength)
+            string rel = GetRelativePath(dir, f);
+            byte[] bytes = File.ReadAllBytes(f);
+            MemoryStream ms = new(bytes, writable: false);
+            TarEntryStream tes = new(ms, 0, bytes.LongLength)
             {
                 FileName = rel,
                 LastModifiedTime = File.GetLastWriteTime(f),
                 IsDirectory = false,
-                TypeFlag = '0'
+                Type = TarEntryType.File,
             };
+
             entries.Add(tes);
         }
 
-        using var tarStream = entries.Tar();
+        using Stream tarStream = entries.Tar();
+        string outputFile = Path.GetFullPath(outputFileName);
+        string outDir = Path.GetDirectoryName(outputFile);
 
-        var outputFile = Path.GetFullPath(outputFileName);
-        var outDir = Path.GetDirectoryName(outputFile);
         if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
         {
             Directory.CreateDirectory(outDir);
         }
 
-        using var fs = new FileStream(outputFile, FileMode.Create, FileAccess.Write);
+        using FileStream fs = new(outputFile, FileMode.Create, FileAccess.Write);
         tarStream.CopyTo(fs);
     }
 
@@ -84,19 +83,19 @@ public static partial class TarHelper
     {
         if (entries == null) throw new ArgumentNullException(nameof(entries));
 
-        var ms = new MemoryStream();
+        MemoryStream ms = new();
 
-        foreach (var entry in entries)
+        foreach (TarEntryStream entry in entries)
         {
-            var name = entry.FileName ?? string.Empty;
+            string name = entry.FileName ?? string.Empty;
             // Normalize to unix separators
             name = name.Replace(Path.DirectorySeparatorChar, '/');
 
             // Build header
-            var header = new byte[512];
+            byte[] header = new byte[512];
 
             // filename and prefix handling
-            var nameBytes = Encoding.ASCII.GetBytes(name);
+            byte[] nameBytes = Encoding.ASCII.GetBytes(name);
             if (nameBytes.Length <= 100)
             {
                 Array.Copy(nameBytes, 0, header, 0, nameBytes.Length);
@@ -104,8 +103,8 @@ public static partial class TarHelper
             else
             {
                 // try to split into prefix and name at slash
-                var s = name;
-                var splitPos = s.Length;
+                string s = name;
+                int splitPos = s.Length;
                 while (splitPos > 0 && s.Substring(0, splitPos).Length > 155)
                 {
                     splitPos = s.LastIndexOf('/', splitPos - 1);
@@ -113,10 +112,11 @@ public static partial class TarHelper
                 }
                 if (splitPos > 0)
                 {
-                    var prefix = s.Substring(0, splitPos);
-                    var shortName = s.Substring(splitPos + 1);
-                    var prefBytes = Encoding.ASCII.GetBytes(prefix);
-                    var shortBytes = Encoding.ASCII.GetBytes(shortName);
+                    string prefix = s.Substring(0, splitPos);
+                    string shortName = s.Substring(splitPos + 1);
+                    byte[] prefBytes = Encoding.ASCII.GetBytes(prefix);
+                    byte[] shortBytes = Encoding.ASCII.GetBytes(shortName);
+
                     Array.Copy(shortBytes, 0, header, 0, Math.Min(100, shortBytes.Length));
                     Array.Copy(prefBytes, 0, header, 345, Math.Min(155, prefBytes.Length));
                 }
@@ -136,7 +136,7 @@ public static partial class TarHelper
             WriteOctal(header, 124, 12, entry.IsDirectory ? 0 : entry.Length);
 
             // mtime (seconds since epoch)
-            var mtime = (long)(entry.LastModifiedTime.ToUniversalTime() - Epoch).TotalSeconds;
+            long mtime = (long)(entry.LastModifiedTime.ToUniversalTime() - Epoch).TotalSeconds;
             WriteOctal(header, 136, 12, mtime);
 
             // typeflag
@@ -145,15 +145,15 @@ public static partial class TarHelper
             // linkname - leave empty
 
             // magic and version
-            var magic = Encoding.ASCII.GetBytes("ustar\0");
+            byte[] magic = Encoding.ASCII.GetBytes("ustar\0");
             Array.Copy(magic, 0, header, 257, magic.Length);
-            var version = Encoding.ASCII.GetBytes("00");
+            byte[] version = Encoding.ASCII.GetBytes("00");
             Array.Copy(version, 0, header, 263, version.Length);
 
             // uname/gname
-            var uname = Encoding.ASCII.GetBytes(Environment.UserName ?? string.Empty);
+            byte[] uname = Encoding.ASCII.GetBytes(Environment.UserName ?? string.Empty);
             Array.Copy(uname, 0, header, 265, Math.Min(uname.Length, 32));
-            var gname = Encoding.ASCII.GetBytes(string.Empty);
+            byte[] gname = Encoding.ASCII.GetBytes(string.Empty);
             Array.Copy(gname, 0, header, 297, 0);
 
             // devmajor/devminor left zero
@@ -168,7 +168,7 @@ public static partial class TarHelper
             for (int i = 0; i < 512; i++) chksum += header[i];
 
             // write checksum as 6-digit octal, then NUL and space
-            var chks = Encoding.ASCII.GetBytes(Convert.ToString(chksum, 8).PadLeft(6, '0'));
+            byte[] chks = Encoding.ASCII.GetBytes(Convert.ToString(chksum, 8).PadLeft(6, '0'));
             Array.Copy(chks, 0, header, 148, Math.Min(6, chks.Length));
             header[154] = 0;
             header[155] = 32;
@@ -186,7 +186,7 @@ public static partial class TarHelper
                 // copy content
                 entry.CopyTo(ms);
                 // pad to 512
-                var pad = (int)((512 - (ms.Position % 512)) % 512);
+                int pad = (int)((512 - (ms.Position % 512)) % 512);
                 if (pad > 0)
                 {
                     ms.Write(new byte[pad], 0, pad);
@@ -203,10 +203,10 @@ public static partial class TarHelper
     private static void WriteOctal(byte[] buffer, int index, int count, long value)
     {
         // Write value as octal ASCII, right aligned, with leading zeros/spaces as needed
-        var oct = Convert.ToString(value < 0 ? 0 : value, 8);
-        var octBytes = Encoding.ASCII.GetBytes(oct);
-        var len = Math.Min(count - 1, octBytes.Length);
-        var start = index + (count - 1 - len);
+        string oct = Convert.ToString(value < 0 ? 0 : value, 8);
+        byte[] octBytes = Encoding.ASCII.GetBytes(oct);
+        int len = Math.Min(count - 1, octBytes.Length);
+        int start = index + (count - 1 - len);
         Array.Copy(octBytes, octBytes.Length - len, buffer, start, len);
         // trailing NUL
         buffer[index + count - 1] = 0;
@@ -214,29 +214,29 @@ public static partial class TarHelper
 
     private static string GetRelativePath(string root, string path)
     {
-        if (string.IsNullOrEmpty(root)) return "./";
-        var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        var fullPath = Path.GetFullPath(path);
+        if (string.IsNullOrEmpty(root)) return string.Empty;
+        string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string fullPath = Path.GetFullPath(path);
 
         // If path starts with root, return the relative portion
         if (fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
         {
-            var rel = fullPath.Substring(fullRoot.Length).Replace(Path.DirectorySeparatorChar, '/');
-            if (string.IsNullOrEmpty(rel)) return "./";
-            return "./" + rel;
+            string rel = fullPath.Substring(fullRoot.Length).Replace(Path.DirectorySeparatorChar, '/');
+            if (string.IsNullOrEmpty(rel)) return string.Empty;
+            return rel;
         }
 
         // Fallback: strip the drive/root and return a path relative to the drive root
         try
         {
-            var rootPath = Path.GetPathRoot(fullPath) ?? string.Empty;
-            var rel = fullPath.Substring(rootPath.Length).Replace(Path.DirectorySeparatorChar, '/');
-            if (string.IsNullOrEmpty(rel)) return "./";
-            return "./" + rel;
+            string rootPath = Path.GetPathRoot(fullPath) ?? string.Empty;
+            string rel = fullPath.Substring(rootPath.Length).Replace(Path.DirectorySeparatorChar, '/');
+            if (string.IsNullOrEmpty(rel)) return string.Empty;
+            return rel;
         }
         catch
         {
-            return "./" + fullPath.Replace(Path.DirectorySeparatorChar, '/');
+            return fullPath.Replace(Path.DirectorySeparatorChar, '/');
         }
     }
 }

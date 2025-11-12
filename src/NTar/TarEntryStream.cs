@@ -95,6 +95,26 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     /// </summary>
     public char TypeFlag { get; internal set; }
 
+    /// <summary>
+    /// Enum type from the typeflag.
+    /// </summary>
+    public TarEntryType Type
+    {
+        get
+        {
+            // NUL (0) is treated as a normal file entry in many tar implementations
+            if (TypeFlag == '\0') return TarEntryType.File;
+            return (TypeFlag >= '0' && TypeFlag <= '7')
+                ? (TarEntryType)(byte)TypeFlag
+                : TarEntryType.Unknown;
+        }
+        set
+        {
+            // Map enum back to the header typeflag byte. Unknown maps to NUL.
+            TypeFlag = value == TarEntryType.Unknown ? '\0' : (char)(byte)value;
+        }
+    }
+
     public override void Flush()
     {
         throw new NotSupportedException();
@@ -117,8 +137,8 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
         if (offset < 0 || offset >= buffer.Length) throw new ArgumentOutOfRangeException(nameof(offset));
         if (count == 0) return 0;
 
-        var maxCount = (int)Math.Min(count, start + Length - position);
-        var readCount = stream.Read(buffer, offset, maxCount);
+        int maxCount = (int)Math.Min(count, start + Length - position);
+        int readCount = stream.Read(buffer, offset, maxCount);
         position += readCount;
         return readCount;
     }
@@ -129,7 +149,9 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     }
 
     public override bool CanRead => true;
+
     public override bool CanSeek => false;
+
     public override bool CanWrite => false;
 
     public override long Length { get; } = length;

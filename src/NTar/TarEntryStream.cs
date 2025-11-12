@@ -22,7 +22,7 @@ namespace NTar;
 /// <param name="length">Number of bytes for this entry's data payload.</param>
 /// <exception cref="ArgumentNullException">If <paramref name="stream"/> is null.</exception>
 [DebuggerDisplay("{ToString()}")]
-public class TarEntryStream(Stream stream, long start, long length) : Stream
+public partial class TarEntryStream(Stream stream, long start, long length) : Stream
 {
     private readonly Stream stream = stream ?? throw new ArgumentNullException(nameof(stream));
     private readonly long start = start;
@@ -41,12 +41,54 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     /// <summary>
     /// True if the entry is a directory.
     /// </summary>
-    public bool IsDirectory { get; internal set; }
+    public bool IsDirectory
+    {
+        get => Type == TarEntryType.Directory;
+        set
+        {
+            if (value) Type = TarEntryType.Directory;
+            else throw new NotSupportedException("Use {Type} to instead.");
+        }
+    }
 
     /// <summary>
     /// Unix mode/permissions of the entry (as an integer, octal-coded in header).
     /// </summary>
-    public int Mode { get; internal set; } = 511; // 0777 dec
+    public int ModeFlag { get; internal set; } = (int)TarEntryMode.Full;
+
+    /// <summary>
+    /// Unix mode/permissions of the entry (as an enum in header).
+    /// </summary>
+    public TarEntryMode Mode
+    {
+        get => (TarEntryMode)ModeFlag;
+        set => ModeFlag = (int)value;
+    }
+
+    /// <summary>
+    /// Raw typeflag from the header as a char.
+    /// </summary>
+    public char TypeFlag { get; internal set; }
+
+    /// <summary>
+    /// Enum type from the typeflag.
+    /// </summary>
+    public TarEntryType Type
+    {
+        get
+        {
+            // NUL (0) is treated as a normal file entry in many tar implementations
+            if (TypeFlag == '\0') return TarEntryType.File;
+            return (TypeFlag >= '0' && TypeFlag <= '7')
+                ? (TarEntryType)(byte)TypeFlag
+                : TarEntryType.Unknown;
+        }
+        set
+        {
+            // Map enum back to the header typeflag byte. Unknown maps to NUL.
+            TypeFlag = value == TarEntryType.Unknown ? '\0' : (char)(byte)value;
+        }
+    }
 
     /// <summary>
     /// User id of the entry owner.
@@ -97,31 +139,6 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     /// Prefix for long file names (ustar prefix field).
     /// </summary>
     public string Prefix { get; internal set; }
-
-    /// <summary>
-    /// Raw typeflag from the header as a char.
-    /// </summary>
-    public char TypeFlag { get; internal set; }
-
-    /// <summary>
-    /// Enum type from the typeflag.
-    /// </summary>
-    public TarEntryType Type
-    {
-        get
-        {
-            // NUL (0) is treated as a normal file entry in many tar implementations
-            if (TypeFlag == '\0') return TarEntryType.File;
-            return (TypeFlag >= '0' && TypeFlag <= '7')
-                ? (TarEntryType)(byte)TypeFlag
-                : TarEntryType.Unknown;
-        }
-        set
-        {
-            // Map enum back to the header typeflag byte. Unknown maps to NUL.
-            TypeFlag = value == TarEntryType.Unknown ? '\0' : (char)(byte)value;
-        }
-    }
 
     public override void Flush()
     {
@@ -219,4 +236,54 @@ public class TarEntryStream(Stream stream, long start, long length) : Stream
     /// </summary>
     public override string ToString()
         => $"{(string.IsNullOrEmpty(FileName) ? "(no name)" : FileName)} {(IsDirectory ? "[dir]" : "[file]")} len={Length} pos={Position}";
+}
+
+public partial class TarEntryStream
+{
+    /// <summary>
+    /// Create a read-only <see cref="TarEntryStream"/> backed by an in-memory buffer.
+    /// </summary>
+    /// <param name="bytes">The byte array containing the entry payload. If <c>null</c>, an empty entry is created.</param>
+    /// <param name="fileName">Optional file name for the entry.</param>
+    /// <param name="type">The <see cref="TarEntryType"/> for the entry (file, directory, symlink, etc.).</param>
+    /// <param name="lastModifiedTime">Timestamp for the entry. If not provided, the default <see cref="DateTime"/> value is used.</param>
+    /// <param name="mode">Unix permission bits for the entry. Defaults to <see cref="TarEntryMode.Full"/>.</param>
+    /// <param name="userId">Numeric user id of the entry owner.</param>
+    /// <param name="groupId">Numeric group id of the entry owner.</param>
+    /// <param name="userName">Optional user name (ustar uname field).</param>
+    /// <param name="groupName">Optional group name (ustar gname field).</param>
+    /// <param name="callback">Optional callback invoked with the created <see cref="TarEntryStream"/> to allow further customization.</param>
+    /// <returns>A new <see cref="TarEntryStream"/> that exposes the provided bytes as a read-only entry payload.</returns>
+    /// <remarks>
+    /// The produced <see cref="TarEntryStream"/> wraps a non-writable <see cref="MemoryStream"/> and does not copy data beyond the supplied byte array.
+    /// The returned stream's <see cref="Length"/> equals the length of <paramref name="bytes"/> (or zero when <c>null</c> was provided).
+    /// </remarks>
+    public static TarEntryStream Create(
+        byte[] bytes,
+        string fileName = null,
+        TarEntryType type = TarEntryType.File,
+        DateTime lastModifiedTime = default,
+        TarEntryMode mode = TarEntryMode.Full,
+        int userId = 0,
+        int groupId = 0,
+        string userName = null,
+        string groupName = null,
+        Action<TarEntryStream> callback = null)
+    {
+        MemoryStream memoryStream = new(bytes ?? [], writable: false);
+        TarEntryStream tarEntryStream = new(memoryStream, 0, bytes.LongLength)
+        {
+            FileName = fileName,
+            LastModifiedTime = lastModifiedTime,
+            Mode = mode,
+            Type = type,
+            UserId = userId,
+            GroupId = groupId,
+            UserName = userName,
+            GroupName = groupName,
+        };
+
+        callback?.Invoke(tarEntryStream);
+        return tarEntryStream;
+    }
 }

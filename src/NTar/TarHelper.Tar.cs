@@ -36,7 +36,6 @@ public static partial class TarHelper
             {
                 FileName = rel.EndsWith("/") ? rel : rel + "/",
                 LastModifiedTime = Directory.GetLastWriteTime(d),
-                IsDirectory = true,
                 Type = TarEntryType.Directory,
             };
 
@@ -53,7 +52,6 @@ public static partial class TarHelper
             {
                 FileName = rel,
                 LastModifiedTime = File.GetLastWriteTime(f),
-                IsDirectory = false,
                 Type = TarEntryType.File,
             };
 
@@ -127,7 +125,7 @@ public static partial class TarHelper
             }
 
             // mode, uid, gid
-            WriteOctal(header, 100, 8, entry.Mode);
+            WriteOctal(header, 100, 8, entry.ModeFlag);
             WriteOctal(header, 108, 8, entry.UserId);
             WriteOctal(header, 116, 8, entry.GroupId);
 

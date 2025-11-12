@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.Text;
 
 namespace NTar.Tests;
 
@@ -64,7 +65,26 @@ public class TestNTar
     [Test]
     public void TestTar()
     {
-        throw new NotImplementedException();
+        string testDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+
+        List<TarEntryStream> entries =
+        [
+            TarEntryStream.Create([], "b/", mode: TarEntryMode.OwnerWrite, userName: "root", groupName: "root2", type: TarEntryType.Directory, groupId: 5300, userId: 3200),
+            TarEntryStream.Create(Encoding.UTF8.GetBytes("6767167"), "b/a.txt", mode: TarEntryMode.Full, groupId: 488, userId: 2390),
+            TarEntryStream.Create(Encoding.UTF8.GetBytes("6969169"), "b.txt", mode: TarEntryMode.Full, groupId: 500, userId: 200),
+        ];
+
+        using Stream tarStream = entries.Tar();
+        string outputFile = Path.GetFullPath(Path.Combine(testDirectory, "test_created.tar"));
+        string outDir = Path.GetDirectoryName(outputFile);
+
+        if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
+        {
+            Directory.CreateDirectory(outDir);
+        }
+
+        using FileStream fs = new(outputFile, FileMode.Create, FileAccess.Write);
+        tarStream.CopyTo(fs);
     }
 
     [Test]

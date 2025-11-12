@@ -198,8 +198,7 @@ public static partial class TarHelper
                 {
                     FileName = fileName,
                     LastModifiedTime = lastModifiedTime,
-                    IsDirectory = false,
-                    Mode = modeRead.HasValue ? (int)modeRead.Value : 0,
+                    ModeFlag = modeRead.HasValue ? (int)modeRead.Value : 0,
                     UserId = uidRead.HasValue ? (int)uidRead.Value : 0,
                     GroupId = gidRead.HasValue ? (int)gidRead.Value : 0,
                     UserName = string.IsNullOrEmpty(userName) ? null : userName,
@@ -232,8 +231,7 @@ public static partial class TarHelper
                 {
                     FileName = fileName,
                     LastModifiedTime = lastModifiedTime,
-                    IsDirectory = true,
-                    Mode = modeRead.HasValue ? (int)modeRead.Value : 0,
+                    ModeFlag = modeRead.HasValue ? (int)modeRead.Value : 0,
                     UserId = uidRead.HasValue ? (int)uidRead.Value : 0,
                     GroupId = gidRead.HasValue ? (int)gidRead.Value : 0,
                     UserName = string.IsNullOrEmpty(userName) ? null : userName,
@@ -266,8 +264,7 @@ public static partial class TarHelper
                 {
                     FileName = fileName,
                     LastModifiedTime = lastModifiedTime,
-                    IsDirectory = false,
-                    Mode = modeRead.HasValue ? (int)modeRead.Value : 0,
+                    ModeFlag = modeRead.HasValue ? (int)modeRead.Value : 0,
                     UserId = uidRead.HasValue ? (int)uidRead.Value : 0,
                     GroupId = gidRead.HasValue ? (int)gidRead.Value : 0,
                     UserName = string.IsNullOrEmpty(userName) ? null : userName,

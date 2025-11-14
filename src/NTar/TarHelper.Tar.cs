@@ -230,9 +230,6 @@ public static partial class TarHelper
 
     private static string GetRelativePath(string basePath, string targetPath)
     {
-#if NETCOREAPP2_0_OR_GREATER
-        return Path.GetRelativePath(basePath, targetPath);
-#else
         Uri baseUri = new(AppendDirectorySeparator(basePath));
         Uri targetUri = new(targetPath);
         string relative = Uri.UnescapeDataString(baseUri.MakeRelativeUri(targetUri).ToString());
@@ -245,6 +242,5 @@ public static partial class TarHelper
                 return path + Path.DirectorySeparatorChar;
             return path;
         }
-#endif
     }
 }

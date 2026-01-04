@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Build/">
+    <File Path="../LICENSE.txt" />
+  </Folder>
+  <Project Path="NTar.Tests/NTar.Tests.csproj" />
+  <Project Path="NTar/NTar.csproj" />
+</Solution>
